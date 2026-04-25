@@ -32,6 +32,7 @@ pipeline {
         stage('Deploy Container') {
             steps {
                 echo 'Deploying container...'
+                bat 'docker rm -f logapp || exit /b 0'
                 bat 'docker run -d --name logapp -p 5000:5000 log-monitoring-app'
             }
         }
