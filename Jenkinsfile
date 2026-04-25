@@ -32,7 +32,22 @@ pipeline {
         stage('Deploy Container') {
             steps {
                 echo 'Deploying container...'
-                bat 'docker run -d -p 5000:5000 log-monitoring-app'
+                bat 'docker run -d --name logapp -p 5000:5000 log-monitoring-app'
+            }
+        }
+
+        stage('Monitor Logs') {
+            steps {
+                echo 'Monitoring application logs...'
+                bat 'docker logs logapp > logs.txt'
+                bat 'findstr ERROR logs.txt'
+            }
+        }
+
+        stage('Self Healing') {
+            steps {
+                echo 'Restarting container for recovery...'
+                bat 'docker restart logapp'
             }
         }
 
