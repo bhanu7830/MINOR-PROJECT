@@ -32,24 +32,69 @@ pipeline {
         stage('Deploy Container') {
             steps {
                 echo 'Deploying container...'
-                bat 'docker rm -f logapp || exit /b 0'
-                bat 'docker run -d --name logapp -p 5000:5000 log-monitoring-app'
+                
+                retry(2) {
+                    bat 'docker rm -f logapp || exit /b 0'
+                    bat 'docker run -d --name logapp -p 5000:5000 log-monitoring-app'
+                }
             }
         }
 
-        stage('Monitor Logs') {
+        stage('Monitor Logs & Health Check') {
             steps {
-                echo 'Monitoring application logs...'
-                bat 'docker logs logapp > logs.txt || exit /b 0'
+                echo 'Checking container health and logs...'
+                
+                bat '''
+                docker inspect -f "{{.State.Running}}" logapp > status.txt
+                docker logs logapp > logs.txt 2>&1 || exit /b 0
+                '''
             }
         }
 
         stage('Self Healing') {
             steps {
-                echo 'Restarting container for recovery...'
-                bat 'docker restart logapp'
+                script {
+                    def status = readFile('status.txt').trim()
+
+                    if (status != "true") {
+                        echo "⚠ Container is DOWN! Restarting..."
+                        bat 'docker restart logapp'
+                    } else {
+                        echo "✅ Container is healthy. No action needed."
+                    }
+                }
             }
         }
 
+        stage('Verify Recovery') {
+            steps {
+                echo 'Verifying container after healing...'
+                
+                bat '''
+                docker inspect -f "{{.State.Running}}" logapp > final_status.txt
+                '''
+                
+                script {
+                    def finalStatus = readFile('final_status.txt').trim()
+
+                    if (finalStatus == "true") {
+                        echo "✅ Application recovered successfully!"
+                    } else {
+                        error("❌ Self-healing failed! Container still down.")
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        failure {
+            echo "🚨 Pipeline failed! Triggering emergency self-healing..."
+            bat 'docker restart logapp || exit /b 0'
+        }
+
+        success {
+            echo "🎉 Pipeline executed successfully with self-healing!"
+        }
     }
 }
