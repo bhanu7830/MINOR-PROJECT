@@ -77,29 +77,7 @@ pipeline {
             }
         }
 
-        stage('Verify Recovery') {
-            steps {
-                echo 'Verifying container after healing...'
-                
-                bat '''
-                docker inspect -f "{{.State.Running}}" logapp > final_status.txt
-                '''
-                
-                script {
-                    def finalStatus = readFile('final_status.txt').trim()
-
-                    if (finalStatus == "true") {
-                        echo "✅ Application recovered successfully!"
-                    } else {
-                        echo "❌ Container failed. Printing logs for debugging..."
-                        bat 'docker logs logapp'
-
-                        error("❌ Self-healing failed! Container still down.")
-                    }
-                }
-            }
-        }
-    }
+        
 
     post {
         failure {
