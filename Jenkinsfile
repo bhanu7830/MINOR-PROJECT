@@ -91,6 +91,9 @@ pipeline {
                     if (finalStatus == "true") {
                         echo "✅ Application recovered successfully!"
                     } else {
+                        echo "❌ Container failed. Printing logs for debugging..."
+                        bat 'docker logs logapp'
+
                         error("❌ Self-healing failed! Container still down.")
                     }
                 }
