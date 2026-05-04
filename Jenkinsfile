@@ -57,33 +57,23 @@ pipeline {
                     def status = readFile('status.txt').trim()
 
                     if (status != "true") {
-                        echo "⚠ Container is DOWN! Performing advanced healing..."
+                        echo "⚠ Container is DOWN! Performing self-healing..."
 
-                        // Remove broken container
                         bat 'docker rm -f logapp || exit /b 0'
-
-                        // Recreate container
                         bat 'docker run -d --name logapp -p 5000:5000 log-monitoring-app'
 
-                        echo "🔄 Container recreated successfully!"
-
-                        // Wait for container to start properly
-                        sleep(time: 5, unit: 'SECONDS')
-
+                        echo "✅ Container recreated successfully!"
                     } else {
-                        echo "✅ Container is healthy. No action needed."
+                        echo "✅ Container is already running."
                     }
                 }
             }
         }
-
-        
+    }
 
     post {
         failure {
             echo "🚨 Pipeline failed! Triggering emergency healing..."
-
-            // Strong recovery even if pipeline fails
             bat 'docker rm -f logapp || exit /b 0'
             bat 'docker run -d --name logapp -p 5000:5000 log-monitoring-app'
         }
